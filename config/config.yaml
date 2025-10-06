@@ -1,0 +1,132 @@
+# WiFi CSI Data Collector Configuration
+# This file contains all configuration options for the CSI data collection system
+
+# Serial Communication Settings
+serial:
+  port: "/dev/null"             # Use /dev/null for demo mode without ESP32
+  baudrate: 115200              # Baud rate for serial communication
+  timeout: 5.0                  # Serial timeout in seconds
+  auto_reconnect: false         # Disable auto reconnect for demo mode
+  reconnect_delay: 5.0          # Delay between reconnection attempts
+
+# Data Collection and Storage Settings
+data:
+  output_dir: "/app/data"       # Directory to store collected data
+  format: "csv"                 # Data format: csv, json, or binary
+  max_file_size: 100            # Maximum file size in MB before rotation
+  compression: true             # Enable data compression
+  buffer_size: 1000             # Number of samples to buffer before writing
+  flush_interval: 30.0          # Interval to flush data to disk (seconds)
+
+# ROS2 Integration Settings
+ros2:
+  enabled: false                # Enable ROS2 communication
+  domain_id: 0                  # ROS2 domain ID (0-101)
+  topic: "/csi_data"            # Topic name for publishing CSI data
+  qos_profile: "default"        # QoS profile: default, sensor_data, system_default
+
+# ESP32 Device Configuration
+esp32:
+  wifi_ssid: ""                 # WiFi SSID for ESP32 to monitor
+  wifi_password: ""             # WiFi password (if needed for connection)
+  csi_rate: 10                  # CSI sampling rate in Hz (1-100)
+  channel: 6                    # WiFi channel to monitor (1-13)
+  bandwidth: 20                 # Channel bandwidth in MHz (20, 40)
+  filter_mac: ""                # MAC address to filter (empty for all)
+  enable_debug: false           # Enable debug output from ESP32
+  device_mode: "RX"             # Device mode: "RX" (receiver) or "TX" (transmitter)
+  tx_power: 20                  # TX power in dBm (for TX mode, 0-20)
+  beacon_interval: 100          # Beacon interval in ms (for TX mode)
+  probe_interval: 1000          # Probe request interval in ms (for TX mode)
+
+# API Server Settings
+api:
+  host: "0.0.0.0"               # API server bind address
+  port: 5000                    # API server port
+  cors_origins:                 # CORS allowed origins
+    - "*"
+  max_connections: 100          # Maximum concurrent connections
+
+# Logging Configuration
+logging:
+  level: "INFO"                 # Log level: DEBUG, INFO, WARNING, ERROR
+  file_path: "/app/logs/csi_collector.log"  # Log file path
+  max_file_size: 10             # Maximum log file size in MB
+  backup_count: 5               # Number of backup log files to keep
+
+# Advanced Settings
+advanced:
+  # Data Processing
+  enable_real_time_processing: true    # Enable real-time data processing
+  processing_threads: 2                # Number of processing threads
+  
+  # Performance Tuning
+  serial_read_buffer: 4096            # Serial read buffer size
+  data_queue_size: 10000              # Internal data queue size
+  
+  # ESP32 Firmware Settings
+  firmware_update_check: true         # Check for firmware updates
+  firmware_url: "https://github.com/espressif/esp-csi/releases"
+  
+  # Experimental Features
+  enable_machine_learning: false      # Enable ML-based anomaly detection
+  ml_model_path: "/app/models/anomaly_detector.pkl"
+  
+  # Data Validation
+  validate_csi_data: true             # Validate incoming CSI data
+  discard_invalid_packets: true       # Discard packets that fail validation
+  
+  # Network Settings
+  discovery_enabled: true             # Enable automatic ESP32 discovery
+  discovery_port: 12345               # UDP port for device discovery
+  
+  # Alerts and Notifications
+  enable_alerts: false                # Enable alert system
+  alert_email: ""                     # Email for alerts
+  alert_webhook: ""                   # Webhook URL for alerts
+
+# Device-Specific Configurations
+devices:
+  # Example device configuration
+  # esp32_001:
+  #   name: "Living Room Sensor"
+  #   port: "/dev/ttyUSB0"
+  #   location: "Living Room"
+  #   calibration_offset: 0.0
+  #   enabled: true
+  #   device_mode: "RX"          # RX (receiver) or TX (transmitter)
+  #   tx_power: 15               # TX power for transmitters (dBm)
+  #   role: "anchor"             # Role: anchor, mobile, reference
+  
+  # esp32_002:
+  #   name: "Bedroom Sensor"
+  #   port: "/dev/ttyUSB1"
+  #   location: "Bedroom"
+  #   calibration_offset: -2.5
+  #   enabled: true
+  #   device_mode: "TX"
+  #   tx_power: 20
+  #   role: "mobile"
+
+# Data Export Settings
+export:
+  formats:
+    - "csv"
+    - "json"
+    - "matlab"
+  include_metadata: true
+  compress_exports: true
+  
+# Visualization Settings
+visualization:
+  enable_web_plots: true
+  plot_update_interval: 1.0           # Update interval in seconds
+  max_plot_points: 1000               # Maximum points to display in plots
+  
+# Security Settings (for production deployments)
+security:
+  enable_authentication: false       # Enable API authentication
+  api_key: ""                        # API key for authentication
+  ssl_enabled: false                 # Enable SSL/TLS
+  ssl_cert_path: ""                  # Path to SSL certificate
+  ssl_key_path: ""                   # Path to SSL private key

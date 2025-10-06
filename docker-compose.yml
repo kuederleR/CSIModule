@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+    depends_on:
+      - csi-collector
+    networks:
+      - csi-network
+    restart: unless-stopped
+
+  csi-collector:
+    build:
+      context: ./csi-collector
+      dockerfile: Dockerfile
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+      - /dev:/dev  # For serial port access
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+    privileged: true  # Required for serial port access
+    networks:
+      - csi-network
+    restart: unless-stopped
+
+  # Optional ROS2 bridge service (enabled via config)
+  ros2-bridge:
+    build:
+      context: ./csi-collector
+      dockerfile: Dockerfile.ros2
+    volumes:
+      - ./config:/app/config:ro
+      - ./data:/app/data
+    environment:
+      - CONFIG_PATH=/app/config/config.yaml
+      - ROS_DOMAIN_ID=0
+    networks:
+      - csi-network
+    profiles:
+      - ros2
+    restart: unless-stopped
+
+networks:
+  csi-network:
+    driver: bridge
+
+volumes:
+  csi-data:
+    driver: local

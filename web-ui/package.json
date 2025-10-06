@@ -1,0 +1,26 @@
+{
+  "name": "csi-web-ui",
+  "version": "1.0.0",
+  "description": "Web UI for WiFi CSI Data Collection",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 8080"
+  },
+  "dependencies": {
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4",
+    "axios": "^1.5.0",
+    "chart.js": "^4.4.0",
+    "vue-chartjs": "^5.2.0",
+    "socket.io-client": "^4.7.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.3.4",
+    "vite": "^4.4.9"
+  },
+  "author": "",
+  "license": "ISC"
+}

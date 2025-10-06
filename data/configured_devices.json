@@ -1,0 +1,27 @@
+{
+  "esp32_1759773014": {
+    "id": "esp32_1759773014",
+    "name": "ESP32 Device (/dev/ttyACM0)",
+    "port": "/dev/ttyACM0",
+    "device_mode": "RX",
+    "location": "",
+    "channel": 6,
+    "tx_power": 0,
+    "packet_interval": 0,
+    "wifi_ssid": "csi-net",
+    "wifi_password": "12345678",
+    "setup_time": "2025-10-06T17:50:14.126825",
+    "last_seen": null,
+    "status": "disconnected",
+    "firmware_version": "Unknown",
+    "hardware_revision": "Unknown",
+    "mac_address": "Unknown",
+    "uptime": "0s",
+    "signal_strength": 0,
+    "packets_received": 0,
+    "packets_transmitted": 0,
+    "bytes_received": 0,
+    "bytes_transmitted": 0,
+    "error_count": 0
+  }
+}

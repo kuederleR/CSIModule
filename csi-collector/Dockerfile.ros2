@@ -1,0 +1,62 @@
+FROM ros:humble-base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    gcc \
+    g++ \
+    make \
+    cmake \
+    git \
+    curl \
+    wget \
+    udev \
+    usbutils \
+    esptool \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install ROS2 Python packages
+RUN apt-get update && apt-get install -y \
+    python3-rclpy \
+    ros-humble-std-msgs \
+    ros-humble-sensor-msgs \
+    ros-humble-geometry-msgs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+COPY requirements-ros2.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements-ros2.txt
+
+# Copy application code
+COPY . .
+
+# Create directories for data and logs
+RUN mkdir -p /app/data /app/logs /app/config
+
+# Set permissions for serial device access
+RUN usermod -a -G dialout root
+
+# Expose the API port
+EXPOSE 5000
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV CONFIG_PATH=/app/config/config.yaml
+ENV ROS_DOMAIN_ID=0
+
+# Source ROS2 setup
+RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/health || exit 1
+
+# Run the application with ROS2 support
+CMD ["/bin/bash", "-c", "source /opt/ros/humble/setup.bash && python main.py --ros2"]

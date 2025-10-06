@@ -1,0 +1,5 @@
+rclpy==3.3.11
+std_msgs==4.2.3
+sensor_msgs==4.2.3
+geometry_msgs==4.2.3
+builtin_interfaces==1.2.1

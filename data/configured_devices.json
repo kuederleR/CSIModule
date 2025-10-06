@@ -1,6 +1,6 @@
 {
-  "esp32_1759773014": {
-    "id": "esp32_1759773014",
+  "esp32_1759774808": {
+    "id": "esp32_1759774808",
     "name": "ESP32 Device (/dev/ttyACM0)",
     "port": "/dev/ttyACM0",
     "device_mode": "RX",
@@ -10,7 +10,7 @@
     "packet_interval": 0,
     "wifi_ssid": "csi-net",
     "wifi_password": "12345678",
-    "setup_time": "2025-10-06T17:50:14.126825",
+    "setup_time": "2025-10-06T18:20:08.925731",
     "last_seen": null,
     "status": "disconnected",
     "firmware_version": "Unknown",

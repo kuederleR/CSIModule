@@ -297,8 +297,9 @@ class APIServer:
                 if not port:
                     return jsonify({'error': 'Port not specified'}), 400
                 
-                # Handle custom firmware file
+                # Handle firmware file
                 firmware_path = None
+                
                 if firmware_type == 'custom' and firmware_file:
                     # Save uploaded firmware file
                     import tempfile
@@ -312,20 +313,34 @@ class APIServer:
                     firmware_path = os.path.join(temp_dir, f"firmware_{port.replace('/', '_')}.bin")
                     firmware_file.save(firmware_path)
                     logger.info(f"Saved custom firmware to {firmware_path}")
+                    
+                elif firmware_type in ['stable', 'latest']:
+                    # Download ESP-CSI firmware
+                    firmware_path = self._download_esp_csi_firmware(firmware_type)
+                    if not firmware_path:
+                        return jsonify({'error': 'Failed to download ESP-CSI firmware'}), 500
                 
-                # Simulate firmware flashing process
-                logger.info(f"Flashing {firmware_type} firmware to {port}")
+                if not firmware_path:
+                    return jsonify({'error': 'No firmware file available'}), 400
                 
-                # In a real implementation, you would use esptool.py here
-                # Example: esptool.py --chip esp32 --port {port} write_flash 0x10000 {firmware_path}
+                # Flash firmware using esptool
+                flash_result = self._flash_esp32_firmware(port, firmware_path, firmware_type)
                 
-                return jsonify({
-                    'success': True,
-                    'message': f'Firmware ({firmware_type}) flashed to {port}',
-                    'firmware_type': firmware_type,
-                    'port': port,
-                    'custom_file': firmware_path if firmware_path else None
-                })
+                if flash_result['success']:
+                    logger.info(f"Successfully flashed {firmware_type} firmware to {port}")
+                    return jsonify({
+                        'success': True,
+                        'message': f'ESP-CSI firmware ({firmware_type}) flashed to {port}',
+                        'firmware_type': firmware_type,
+                        'port': port,
+                        'flash_output': flash_result.get('output', ''),
+                        'chip_info': flash_result.get('chip_info', {})
+                    })
+                else:
+                    return jsonify({
+                        'error': f'Failed to flash firmware: {flash_result.get("error", "Unknown error")}',
+                        'output': flash_result.get('output', '')
+                    }), 500
                 
             except Exception as e:
                 logger.error(f"Failed to flash firmware: {e}")
@@ -333,7 +348,7 @@ class APIServer:
         
         @self.app.route('/esp32/configure', methods=['POST'])
         def configure_esp32():
-            """Configure ESP32 device"""
+            """Configure ESP32 device with ESP-CSI firmware"""
             try:
                 data = request.get_json()
                 port = data.get('port')
@@ -360,16 +375,25 @@ class APIServer:
                 
                 logger.info(f"Configuring ESP32 on {port} in {device_config['device_mode']} mode")
                 
-                # Add device to device manager
-                device_id = self.device_manager.add_device(device_config)
+                # Send configuration to ESP32 via serial
+                config_result = self._configure_esp32_device(port, device_config)
                 
-                # This is a placeholder - actual implementation would send config to ESP32
-                return jsonify({
-                    'success': True,
-                    'message': f'Device configured on {port} as {device_config["device_mode"]}',
-                    'device_id': device_id,
-                    'config': device_config
-                })
+                if config_result['success']:
+                    # Add device to device manager
+                    device_id = self.device_manager.add_device(device_config)
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': f'Device configured on {port} as {device_config["device_mode"]}',
+                        'device_id': device_id,
+                        'config': device_config,
+                        'device_response': config_result.get('response', '')
+                    })
+                else:
+                    return jsonify({
+                        'error': f'Failed to configure device: {config_result.get("error", "Unknown error")}',
+                        'output': config_result.get('output', '')
+                    }), 500
                 
             except Exception as e:
                 logger.error(f"Failed to configure device: {e}")
@@ -529,6 +553,356 @@ class APIServer:
             except Exception as e:
                 logger.error(f"Failed to restart device: {e}")
                 return jsonify({'error': str(e)}), 500
+    
+    def _download_esp_csi_firmware(self, firmware_type: str) -> str:
+        """Download ESP-CSI firmware from GitHub releases"""
+        try:
+            import requests
+            import zipfile
+            import os
+            
+            # ESP-CSI firmware URLs
+            firmware_urls = {
+                'stable': 'https://github.com/espressif/esp-csi/releases/latest/download/esp-csi-firmware.zip',
+                'latest': 'https://api.github.com/repos/espressif/esp-csi/releases/latest'
+            }
+            
+            temp_dir = '/tmp/esp32_firmware'
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            if firmware_type == 'latest':
+                # Get latest release info from GitHub API
+                response = requests.get(firmware_urls['latest'])
+                if response.status_code == 200:
+                    release_data = response.json()
+                    # Look for firmware asset
+                    for asset in release_data.get('assets', []):
+                        if 'firmware' in asset['name'].lower() and asset['name'].endswith('.zip'):
+                            download_url = asset['browser_download_url']
+                            break
+                    else:
+                        # Fallback to pre-built binaries
+                        download_url = 'https://github.com/espressif/esp-csi/archive/refs/heads/master.zip'
+                else:
+                    return None
+            else:
+                # Use stable release URL (this is a placeholder - adjust based on actual ESP-CSI releases)
+                download_url = 'https://github.com/espressif/esp-csi/archive/refs/tags/v1.0.0.zip'
+            
+            # Download firmware
+            firmware_zip_path = os.path.join(temp_dir, f'esp_csi_{firmware_type}.zip')
+            logger.info(f"Downloading ESP-CSI firmware from {download_url}")
+            
+            response = requests.get(download_url, stream=True)
+            if response.status_code == 200:
+                with open(firmware_zip_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                # Extract and find firmware binary
+                extract_dir = os.path.join(temp_dir, f'esp_csi_{firmware_type}')
+                with zipfile.ZipFile(firmware_zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(extract_dir)
+                
+                # Look for firmware binary files
+                firmware_files = []
+                for root, dirs, files in os.walk(extract_dir):
+                    for file in files:
+                        if file.endswith('.bin') and any(x in file.lower() for x in ['firmware', 'app', 'esp-csi']):
+                            firmware_files.append(os.path.join(root, file))
+                
+                if firmware_files:
+                    # Use the first found firmware file
+                    firmware_path = firmware_files[0]
+                    logger.info(f"Found ESP-CSI firmware: {firmware_path}")
+                    return firmware_path
+                else:
+                    # If no pre-built binary, we need to build it
+                    return self._build_esp_csi_firmware(extract_dir)
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to download ESP-CSI firmware: {e}")
+            return None
+    
+    def _build_esp_csi_firmware(self, source_dir: str) -> str:
+        """Build ESP-CSI firmware from source"""
+        try:
+            import subprocess
+            import os
+            
+            # Look for ESP-CSI examples
+            examples_dir = None
+            for root, dirs, files in os.walk(source_dir):
+                if 'examples' in dirs:
+                    examples_dir = os.path.join(root, 'examples')
+                    break
+            
+            if not examples_dir:
+                logger.error("No examples directory found in ESP-CSI source")
+                return None
+            
+            # Look for CSI examples
+            csi_example_dir = None
+            for item in os.listdir(examples_dir):
+                item_path = os.path.join(examples_dir, item)
+                if os.path.isdir(item_path) and 'csi' in item.lower():
+                    csi_example_dir = item_path
+                    break
+            
+            if not csi_example_dir:
+                logger.error("No CSI example found in ESP-CSI source")
+                return None
+            
+            logger.info(f"Building ESP-CSI firmware from {csi_example_dir}")
+            
+            # Build firmware using idf.py (if available)
+            build_cmd = ['idf.py', 'build']
+            result = subprocess.run(
+                build_cmd, 
+                cwd=csi_example_dir,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+            
+            if result.returncode == 0:
+                # Look for built firmware
+                build_dir = os.path.join(csi_example_dir, 'build')
+                firmware_path = os.path.join(build_dir, 'esp-csi-example.bin')
+                if os.path.exists(firmware_path):
+                    logger.info(f"Successfully built ESP-CSI firmware: {firmware_path}")
+                    return firmware_path
+                else:
+                    # Look for other .bin files
+                    for file in os.listdir(build_dir):
+                        if file.endswith('.bin') and 'bootloader' not in file:
+                            firmware_path = os.path.join(build_dir, file)
+                            logger.info(f"Found built firmware: {firmware_path}")
+                            return firmware_path
+            
+            logger.error(f"Failed to build ESP-CSI firmware: {result.stderr}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"Failed to build ESP-CSI firmware: {e}")
+            return None
+    
+    def _flash_esp32_firmware(self, port: str, firmware_path: str, firmware_type: str) -> dict:
+        """Flash ESP32 firmware using esptool"""
+        try:
+            import subprocess
+            import os
+            
+            # Check if esptool is available
+            try:
+                subprocess.run(['esptool.py', '--version'], capture_output=True, check=True)
+                esptool_cmd = 'esptool.py'
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                try:
+                    subprocess.run(['python', '-m', 'esptool', '--version'], capture_output=True, check=True)
+                    esptool_cmd = ['python', '-m', 'esptool']
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    return {
+                        'success': False,
+                        'error': 'esptool not found. Please install esptool: pip install esptool'
+                    }
+            
+            logger.info(f"Flashing ESP32 firmware to {port} using esptool")
+            
+            # Step 1: Get chip info
+            if isinstance(esptool_cmd, str):
+                chip_info_cmd = [esptool_cmd, '--port', port, 'chip_id']
+            else:
+                chip_info_cmd = esptool_cmd + ['--port', port, 'chip_id']
+            
+            chip_result = subprocess.run(
+                chip_info_cmd,
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            chip_info = {}
+            if chip_result.returncode == 0:
+                # Parse chip info from output
+                for line in chip_result.stdout.split('\n'):
+                    if 'Chip is' in line:
+                        chip_info['chip_type'] = line.split('Chip is')[1].strip()
+                    elif 'MAC:' in line:
+                        chip_info['mac_address'] = line.split('MAC:')[1].strip()
+            
+            # Step 2: Erase flash
+            if isinstance(esptool_cmd, str):
+                erase_cmd = [esptool_cmd, '--port', port, 'erase_flash']
+            else:
+                erase_cmd = esptool_cmd + ['--port', port, 'erase_flash']
+            
+            logger.info("Erasing ESP32 flash...")
+            erase_result = subprocess.run(
+                erase_cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if erase_result.returncode != 0:
+                return {
+                    'success': False,
+                    'error': f'Failed to erase flash: {erase_result.stderr}',
+                    'output': erase_result.stdout + erase_result.stderr
+                }
+            
+            # Step 3: Flash firmware
+            # For ESP-CSI, we typically flash at 0x10000 (app partition)
+            # But we might also need bootloader and partition table
+            flash_address = '0x10000'
+            
+            if isinstance(esptool_cmd, str):
+                flash_cmd = [
+                    esptool_cmd, '--chip', 'esp32', '--port', port, '--baud', '460800',
+                    'write_flash', '-z', flash_address, firmware_path
+                ]
+            else:
+                flash_cmd = esptool_cmd + [
+                    '--chip', 'esp32', '--port', port, '--baud', '460800',
+                    'write_flash', '-z', flash_address, firmware_path
+                ]
+            
+            logger.info(f"Flashing firmware to {port}...")
+            flash_result = subprocess.run(
+                flash_cmd,
+                capture_output=True,
+                text=True,
+                timeout=120  # 2 minute timeout for flashing
+            )
+            
+            if flash_result.returncode == 0:
+                logger.info(f"Successfully flashed ESP32 firmware to {port}")
+                return {
+                    'success': True,
+                    'output': flash_result.stdout,
+                    'chip_info': chip_info
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f'Flash operation failed: {flash_result.stderr}',
+                    'output': flash_result.stdout + flash_result.stderr
+                }
+            
+        except subprocess.TimeoutExpired:
+            return {
+                'success': False,
+                'error': 'Flash operation timed out'
+            }
+        except Exception as e:
+            logger.error(f"Failed to flash ESP32 firmware: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def _configure_esp32_device(self, port: str, config: dict) -> dict:
+        """Send configuration commands to ESP32 device"""
+        try:
+            import serial
+            import time
+            import json
+            
+            # Open serial connection
+            ser = serial.Serial(port, 115200, timeout=5)
+            time.sleep(2)  # Wait for ESP32 to initialize
+            
+            # Clear any existing data
+            ser.reset_input_buffer()
+            ser.reset_output_buffer()
+            
+            logger.info(f"Configuring ESP32 device on {port}")
+            
+            # Send configuration commands based on ESP-CSI format
+            config_commands = []
+            
+            # WiFi configuration
+            if config.get('wifi_ssid'):
+                config_commands.append(f"wifi_ssid={config['wifi_ssid']}")
+            if config.get('wifi_password'):
+                config_commands.append(f"wifi_password={config['wifi_password']}")
+            
+            # CSI configuration
+            config_commands.extend([
+                f"csi_rate={config.get('csi_rate', 10)}",
+                f"channel={config.get('channel', 6)}",
+                f"bandwidth={config.get('bandwidth', 20)}",
+                f"device_mode={config.get('device_mode', 'RX')}"
+            ])
+            
+            # TX specific configuration
+            if config.get('device_mode') == 'TX':
+                config_commands.extend([
+                    f"tx_power={config.get('tx_power', 15)}",
+                    f"packet_interval={config.get('packet_interval', 100)}"
+                ])
+            
+            # Debug mode
+            if config.get('enable_debug'):
+                config_commands.append("debug=1")
+            
+            # Send each command
+            responses = []
+            for cmd in config_commands:
+                logger.debug(f"Sending command: {cmd}")
+                ser.write(f"{cmd}\n".encode())
+                time.sleep(0.5)
+                
+                # Read response
+                response = ""
+                start_time = time.time()
+                while time.time() - start_time < 3:  # 3 second timeout per command
+                    if ser.in_waiting > 0:
+                        response += ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
+                    time.sleep(0.1)
+                
+                responses.append(f"{cmd}: {response.strip()}")
+            
+            # Send final configuration commit command
+            ser.write("save_config\n".encode())
+            time.sleep(1)
+            
+            # Read final response
+            final_response = ""
+            start_time = time.time()
+            while time.time() - start_time < 5:  # 5 second timeout for save
+                if ser.in_waiting > 0:
+                    final_response += ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
+                time.sleep(0.1)
+            
+            responses.append(f"save_config: {final_response.strip()}")
+            
+            # Close serial connection
+            ser.close()
+            
+            logger.info(f"Successfully configured ESP32 device on {port}")
+            
+            return {
+                'success': True,
+                'response': '\n'.join(responses),
+                'commands_sent': config_commands
+            }
+            
+        except serial.SerialException as e:
+            logger.error(f"Serial communication error: {e}")
+            return {
+                'success': False,
+                'error': f'Serial communication failed: {str(e)}'
+            }
+        except Exception as e:
+            logger.error(f"Failed to configure ESP32 device: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     def setup_websocket_handlers(self):
         """Setup WebSocket event handlers"""

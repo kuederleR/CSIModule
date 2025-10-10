@@ -1,0 +1,5 @@
+Command: /home/ryan/.espressif/python_env/idf5.5_py3.10_env/bin/python /home/ryan/esp/esp-idf/tools/idf_monitor.py -p /dev/ttyACM0 -b 921600 --toolchain-prefix riscv32-esp-elf- --target esp32c6 --revision 0 --decode-panic backtrace -m '/home/ryan/.espressif/python_env/idf5.5_py3.10_env/bin/python' '/home/ryan/esp/esp-idf/tools/idf.py'
+[0;33m--- esp-idf-monitor 1.8.0 on /dev/ttyACM0 921600[0m
+[0;33m--- Warning: No ELF files found. Please provide the ELF file paths, required for binary log decoding.[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0m

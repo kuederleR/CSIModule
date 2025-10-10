@@ -1,0 +1,39 @@
+# Build artifacts and temporary files
+build/
+build_output/
+generated_configs/
+*.tmp
+*.temp
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Docker volumes
+configs/
+
+# ESP-IDF build artifacts
+**/sdkconfig
+**/sdkconfig.old
+**/build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/

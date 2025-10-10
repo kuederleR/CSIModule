@@ -1,0 +1,5 @@
+flask==3.0.0
+pyserial==3.5
+numpy==1.24.3
+csi-py==0.0.2
+rclpy

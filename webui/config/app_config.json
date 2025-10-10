@@ -1,0 +1,5 @@
+{
+  "auto_connect": false,
+  "port": "/dev/ttyACM0",
+  "ros2_enabled": false
+}

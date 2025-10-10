@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSI Data Logger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .status-card {
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .status-card.connected {
+            background: #e8f5e9;
+            border-color: #4CAF50;
+        }
+        
+        .status-card.active {
+            background: #e3f2fd;
+            border-color: #2196F3;
+        }
+        
+        .status-card.inactive {
+            background: #fafafa;
+        }
+        
+        .status-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-top: 5px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #45a049;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #da190b;
+        }
+        
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #0b7dda;
+        }
+        
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        
+        .btn-warning:hover:not(:disabled) {
+            background: #e68900;
+        }
+        
+        .live-data {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .packet {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: white;
+            border-left: 3px solid #4CAF50;
+        }
+        
+        .file-list {
+            list-style: none;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .file-meta {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #4CAF50;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 CSI Data Logger</h1>
+        
+        <!-- Alert messages -->
+        <div id="alert" style="display: none;"></div>
+        
+        <!-- Status Section -->
+        <div class="section">
+            <h2>Status</h2>
+            <div class="status-grid">
+                <div id="connection-status" class="status-card inactive">
+                    <div class="status-label">Connection</div>
+                    <div class="status-value" id="connection-text">Disconnected</div>
+                </div>
+                <div id="logging-status" class="status-card inactive">
+                    <div class="status-label">Logging</div>
+                    <div class="status-value" id="logging-text">Inactive</div>
+                </div>
+                <div id="ros2-status" class="status-card inactive">
+                    <div class="status-label">ROS2 Publishing</div>
+                    <div class="status-value" id="ros2-text">Inactive</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">Total Packets</div>
+                    <div class="status-value" id="packet-count">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Connection Control -->
+        <div class="section">
+            <h2>Serial Connection</h2>
+            
+            <div class="form-group">
+                <label for="port">Serial Port</label>
+                <select id="port">
+                    <option value="">Select a port...</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button id="connect-btn" class="btn-primary" onclick="connectPort()">
+                    Connect
+                </button>
+                <button id="disconnect-btn" class="btn-danger" onclick="disconnectPort()" disabled>
+                    Disconnect
+                </button>
+                <button class="btn-secondary" onclick="refreshPorts()">
+                    Refresh Ports
+                </button>
+            </div>
+        </div>
+        
+        <!-- Logging Control -->
+        <div class="section">
+            <h2>Logging Control</h2>
+            
+            <div class="form-group">
+                <label for="format">Log Format</label>
+                <select id="format">
+                    <option value="json">JSON Lines (.jsonl)</option>
+                    <option value="csv">CSV (.csv)</option>
+                    <option value="numpy">NumPy (.npz)</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button id="start-logging-btn" class="btn-primary" onclick="startLogging()" disabled>
+                    Start Logging
+                </button>
+                <button id="stop-logging-btn" class="btn-danger" onclick="stopLogging()" disabled>
+                    Stop Logging
+                </button>
+            </div>
+        </div>
+        
+        <!-- ROS2 Control -->
+        <div class="section" id="ros2-section">
+            <h2>ROS2 Publishing</h2>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="ros2-checkbox" onchange="toggleROS2()">
+                <label for="ros2-checkbox">Publish CSI data to ROS2 (topic: /csi_data)</label>
+            </div>
+            
+            <div id="ros2-info" class="alert alert-info" style="margin-top: 15px; display: none;">
+                ROS2 publishing is active. Data is being published to topic <strong>/csi_data</strong> as <strong>wifi_msgs/msg/CSI</strong>
+            </div>
+        </div>
+        
+        <!-- Live Data Section -->
+        <div class="section">
+            <h2>Live Data (Last 10 Packets)</h2>
+            <div id="live-data" class="live-data">
+                <div class="empty-state">No data yet. Connect to a port to see live packets.</div>
+            </div>
+        </div>
+        
+        <!-- Log Files Section -->
+        <div class="section">
+            <h2>Log Files</h2>
+            <button class="btn-secondary" onclick="refreshLogs()" style="margin-bottom: 15px;">
+                Refresh Files
+            </button>
+            <ul id="file-list" class="file-list">
+                <li class="empty-state">No log files yet</li>
+            </ul>
+        </div>
+        
+        <!-- Preferences Section -->
+        <div class="section">
+            <h2>⚙️ Preferences</h2>
+            <p style="color: #666; margin-bottom: 15px;">
+                Your preferences are automatically saved in your browser and restored on next visit.
+            </p>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                <strong>Saved Preferences:</strong>
+                <ul style="margin: 10px 0 0 20px; color: #666;">
+                    <li>Last port: <span id="pref-port" style="color: #333; font-weight: 500;">-</span></li>
+                    <li>Log format: <span id="pref-format" style="color: #333; font-weight: 500;">-</span></li>
+                    <li>ROS2 enabled: <span id="pref-ros2" style="color: #333; font-weight: 500;">-</span></li>
+                </ul>
+            </div>
+            
+            <button class="btn-secondary" onclick="clearPreferences()">
+                Clear All Preferences
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        let statusInterval = null;
+        let ros2Available = {{ ros2_available|tojson }};
+        
+        // Preferences storage
+        const PREFS_KEY = 'csi_logger_preferences';
+        
+        function getPreferences() {
+            try {
+                const stored = localStorage.getItem(PREFS_KEY);
+                return stored ? JSON.parse(stored) : getDefaultPreferences();
+            } catch (e) {
+                console.error('Error loading preferences:', e);
+                return getDefaultPreferences();
+            }
+        }
+        
+        function getDefaultPreferences() {
+            return {
+                port: '',
+                format: 'json',
+                ros2Enabled: false,
+                lastConnectedPort: ''
+            };
+        }
+        
+        function savePreferences(prefs) {
+            try {
+                localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+                console.log('Preferences saved:', prefs);
+            } catch (e) {
+                console.error('Error saving preferences:', e);
+            }
+        }
+        
+        function updatePreference(key, value) {
+            const prefs = getPreferences();
+            prefs[key] = value;
+            savePreferences(prefs);
+        }
+        
+        function loadPreferences() {
+            const prefs = getPreferences();
+            
+            // Load format preference
+            const formatSelect = document.getElementById('format');
+            if (formatSelect && prefs.format) {
+                formatSelect.value = prefs.format;
+            }
+            
+            // Load port preference after ports are loaded
+            // This will be called from refreshPorts()
+            
+            // Update preferences display
+            updatePreferencesDisplay();
+            
+            console.log('Preferences loaded:', prefs);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPreferences();
+            refreshPorts();
+            refreshLogs();
+            startStatusPolling();
+            
+            // Show warning if ROS2 not available, but keep section visible
+            if (!ros2Available) {
+                const ros2Section = document.getElementById('ros2-section');
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert alert-error';
+                warningDiv.innerHTML = '<strong>⚠️ ROS2 Not Available:</strong> ROS2 libraries are not installed or not properly configured in this container. The checkbox is visible but will not function.';
+                ros2Section.insertBefore(warningDiv, ros2Section.firstChild.nextSibling);
+                document.getElementById('ros2-checkbox').disabled = true;
+            }
+            
+            // Add change listeners to save preferences
+            document.getElementById('format').addEventListener('change', function() {
+                updatePreference('format', this.value);
+            });
+            
+            document.getElementById('port').addEventListener('change', function() {
+                updatePreference('port', this.value);
+            });
+        });
+        
+        function showAlert(message, type = 'error') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function refreshPorts() {
+            try {
+                const response = await fetch('/api/ports');
+                const data = await response.json();
+                
+                const portSelect = document.getElementById('port');
+                const prefs = getPreferences();
+                portSelect.innerHTML = '<option value="">Select a port...</option>';
+                
+                let savedPortAvailable = false;
+                data.ports.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    portSelect.appendChild(option);
+                    
+                    // Check if saved port is available
+                    if (port === prefs.port || port === prefs.lastConnectedPort) {
+                        savedPortAvailable = true;
+                    }
+                });
+                
+                // Auto-select saved port if available
+                if (savedPortAvailable) {
+                    portSelect.value = prefs.port || prefs.lastConnectedPort;
+                }
+            } catch (error) {
+                showAlert('Failed to fetch ports: ' + error.message);
+            }
+        }
+        
+        async function connectPort() {
+            const port = document.getElementById('port').value;
+            
+            if (!port) {
+                showAlert('Please select a serial port');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({port})
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to connect');
+                }
+                
+                // Save last connected port
+                updatePreference('lastConnectedPort', port);
+                
+                showAlert('Connected to ' + port, 'success');
+            } catch (error) {
+                showAlert('Failed to connect: ' + error.message);
+            }
+        }
+        
+        async function disconnectPort() {
+            try {
+                const response = await fetch('/api/disconnect', {method: 'POST'});
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to disconnect');
+                }
+                
+                showAlert('Disconnected from port', 'success');
+            } catch (error) {
+                showAlert('Failed to disconnect: ' + error.message);
+            }
+        }
+        
+        async function startLogging() {
+            const format = document.getElementById('format').value;
+            
+            try {
+                const response = await fetch('/api/logging/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({format})
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to start logging');
+                }
+                
+                showAlert('Logging started', 'success');
+            } catch (error) {
+                showAlert('Failed to start logging: ' + error.message);
+            }
+        }
+        
+        async function stopLogging() {
+            try {
+                const response = await fetch('/api/logging/stop', {method: 'POST'});
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to stop logging');
+                }
+                
+                const data = await response.json();
+                showAlert(`Logging stopped. Logged ${data.packet_count} packets`, 'success');
+                refreshLogs();
+            } catch (error) {
+                showAlert('Failed to stop logging: ' + error.message);
+            }
+        }
+        
+        async function toggleROS2() {
+            const checkbox = document.getElementById('ros2-checkbox');
+            
+            if (checkbox.checked) {
+                try {
+                    const response = await fetch('/api/ros2/start', {method: 'POST'});
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to start ROS2');
+                    }
+                    
+                    updatePreference('ros2Enabled', true);
+                    showAlert('ROS2 publishing started', 'success');
+                } catch (error) {
+                    showAlert('Failed to start ROS2: ' + error.message);
+                    checkbox.checked = false;
+                }
+            } else {
+                try {
+                    const response = await fetch('/api/ros2/stop', {method: 'POST'});
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Failed to stop ROS2');
+                    }
+                    
+                    updatePreference('ros2Enabled', false);
+                    showAlert('ROS2 publishing stopped', 'success');
+                } catch (error) {
+                    showAlert('Failed to stop ROS2: ' + error.message);
+                }
+            }
+        }
+        
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                // Connection status
+                const connectionCard = document.getElementById('connection-status');
+                const connectionText = document.getElementById('connection-text');
+                if (data.connected) {
+                    connectionCard.className = 'status-card connected';
+                    connectionText.textContent = `Connected: ${data.port}`;
+                } else {
+                    connectionCard.className = 'status-card inactive';
+                    connectionText.textContent = 'Disconnected';
+                }
+                
+                // Logging status
+                const loggingCard = document.getElementById('logging-status');
+                const loggingText = document.getElementById('logging-text');
+                if (data.logging_active) {
+                    loggingCard.className = 'status-card active';
+                    loggingText.textContent = `Active (${data.logging_format}) - ${data.logging_count} pkts`;
+                } else {
+                    loggingCard.className = 'status-card inactive';
+                    loggingText.textContent = 'Inactive';
+                }
+                
+                // ROS2 status
+                const ros2Card = document.getElementById('ros2-status');
+                const ros2Text = document.getElementById('ros2-text');
+                const ros2Info = document.getElementById('ros2-info');
+                const ros2Checkbox = document.getElementById('ros2-checkbox');
+                
+                if (data.ros2_active) {
+                    ros2Card.className = 'status-card active';
+                    ros2Text.textContent = `Active - ${data.ros2_count} msgs`;
+                    ros2Info.style.display = 'block';
+                    // Only update checkbox if server state differs (to not override user clicks)
+                    if (!ros2Checkbox.checked) {
+                        ros2Checkbox.checked = true;
+                    }
+                } else {
+                    ros2Card.className = 'status-card inactive';
+                    ros2Text.textContent = 'Inactive';
+                    ros2Info.style.display = 'none';
+                    // Only update checkbox if server state differs
+                    if (ros2Checkbox.checked) {
+                        ros2Checkbox.checked = false;
+                    }
+                }
+                
+                // Packet count
+                document.getElementById('packet-count').textContent = data.packet_count;
+                
+                // Update button states
+                document.getElementById('connect-btn').disabled = data.connected;
+                document.getElementById('disconnect-btn').disabled = !data.connected;
+                document.getElementById('port').disabled = data.connected;
+                document.getElementById('start-logging-btn').disabled = !data.connected || data.logging_active;
+                document.getElementById('stop-logging-btn').disabled = !data.logging_active;
+                document.getElementById('format').disabled = data.logging_active;
+                // Enable ROS2 checkbox when connected (removed the disable line)
+                ros2Checkbox.disabled = !data.connected;
+                
+                // Update live data
+                updateLiveData(data.buffer);
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        }
+        
+        function updateLiveData(packets) {
+            const liveDataDiv = document.getElementById('live-data');
+            
+            if (!packets || packets.length === 0) {
+                liveDataDiv.innerHTML = '<div class="empty-state">No data yet. Connect to a port to see live packets.</div>';
+                return;
+            }
+            
+            liveDataDiv.innerHTML = packets.map(packet => `
+                <div class="packet">
+                    <strong>Packet #${packet.packet_num}</strong> | 
+                    ${new Date(packet.timestamp).toLocaleTimeString()} | 
+                    RSSI: ${packet.rssi} | 
+                    Channel: ${packet.channel} |
+                    Amplitude: ${packet.amplitude_mean}
+                </div>
+            `).join('');
+        }
+        
+        async function refreshLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                const data = await response.json();
+                
+                const fileList = document.getElementById('file-list');
+                
+                if (!data.files || data.files.length === 0) {
+                    fileList.innerHTML = '<li class="empty-state">No log files yet</li>';
+                    return;
+                }
+                
+                fileList.innerHTML = data.files.map(file => `
+                    <li class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-meta">
+                                ${formatFileSize(file.size)} | 
+                                ${new Date(file.modified).toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-secondary btn-small" onclick="downloadFile('${file.name}')">
+                                Download
+                            </button>
+                            <button class="btn-danger btn-small" onclick="deleteFile('${file.name}')">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (error) {
+                showAlert('Failed to fetch logs: ' + error.message);
+            }
+        }
+        
+        function downloadFile(filename) {
+            window.location.href = `/api/download/${filename}`;
+        }
+        
+        async function deleteFile(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/delete/${filename}`, {method: 'DELETE'});
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete file');
+                }
+                
+                showAlert('File deleted successfully', 'success');
+                refreshLogs();
+            } catch (error) {
+                showAlert('Failed to delete file: ' + error.message);
+            }
+        }
+        
+        // Preferences functions
+        function updatePreferencesDisplay() {
+            const prefs = getPreferences();
+            document.getElementById('pref-port').textContent = prefs.lastConnectedPort || 'None';
+            document.getElementById('pref-format').textContent = prefs.format || 'json';
+            document.getElementById('pref-ros2').textContent = prefs.ros2Enabled ? 'Yes' : 'No';
+        }
+        
+        function clearPreferences() {
+            if (!confirm('Clear all saved preferences? This will reset port, format, and ROS2 settings.')) {
+                return;
+            }
+            
+            localStorage.removeItem('csiPreferences');
+            
+            // Reset to defaults
+            document.getElementById('format').value = 'json';
+            document.getElementById('ros2-checkbox').checked = false;
+            
+            updatePreferencesDisplay();
+            showAlert('Preferences cleared', 'success');
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        function startStatusPolling() {
+            updateStatus();
+            statusInterval = setInterval(updateStatus, 1000);
+        }
+    </script>
+</body>
+</html>

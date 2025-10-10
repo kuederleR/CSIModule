@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSI Data Logger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #45a049;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #da190b;
+        }
+        
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #0b7dda;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .status.active {
+            background: #e8f5e9;
+            border: 1px solid #4CAF50;
+            color: #2e7d32;
+        }
+        
+        .status.inactive {
+            background: #fafafa;
+            border: 1px solid #ddd;
+            color: #666;
+        }
+        
+        .live-data {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .packet {
+            padding: 8px;
+            margin-bottom: 5px;
+            background: white;
+            border-left: 3px solid #4CAF50;
+        }
+        
+        .file-list {
+            list-style: none;
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .file-meta {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef5350;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 CSI Data Logger</h1>
+        
+        <!-- Alert messages -->
+        <div id="alert" style="display: none;"></div>
+        
+        <!-- Status Section -->
+        <div class="section">
+            <h2>Status</h2>
+            <div id="status" class="status inactive">
+                <strong>Status:</strong> <span id="status-text">Idle</span><br>
+                <span id="status-details"></span>
+            </div>
+        </div>
+        
+        <!-- Control Section -->
+        <div class="section">
+            <h2>Logging Control</h2>
+            
+            <div class="form-group">
+                <label for="port">Serial Port</label>
+                <select id="port">
+                    <option value="">Select a port...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="format">Log Format</label>
+                <select id="format">
+                    <option value="json">JSON Lines (.jsonl)</option>
+                    <option value="csv">CSV (.csv)</option>
+                    <option value="numpy">NumPy (.npz)</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button id="start-btn" class="btn-primary" onclick="startLogging()">
+                    Start Logging
+                </button>
+                <button id="stop-btn" class="btn-danger" onclick="stopLogging()" disabled>
+                    Stop Logging
+                </button>
+                <button class="btn-secondary" onclick="refreshPorts()">
+                    Refresh Ports
+                </button>
+            </div>
+        </div>
+        
+        <!-- Live Data Section -->
+        <div class="section">
+            <h2>Live Data (Last 10 Packets)</h2>
+            <div id="live-data" class="live-data">
+                <div class="empty-state">No data yet. Start logging to see live packets.</div>
+            </div>
+        </div>
+        
+        <!-- Log Files Section -->
+        <div class="section">
+            <h2>Log Files</h2>
+            <button class="btn-secondary" onclick="refreshLogs()" style="margin-bottom: 15px;">
+                Refresh Files
+            </button>
+            <ul id="file-list" class="file-list">
+                <li class="empty-state">No log files yet</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        let statusInterval = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshPorts();
+            refreshLogs();
+            startStatusPolling();
+        });
+        
+        function showAlert(message, type = 'error') {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+        
+        async function refreshPorts() {
+            try {
+                const response = await fetch('/api/ports');
+                const data = await response.json();
+                
+                const portSelect = document.getElementById('port');
+                portSelect.innerHTML = '<option value="">Select a port...</option>';
+                
+                data.ports.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    portSelect.appendChild(option);
+                });
+            } catch (error) {
+                showAlert('Failed to fetch ports: ' + error.message);
+            }
+        }
+        
+        async function startLogging() {
+            const port = document.getElementById('port').value;
+            const format = document.getElementById('format').value;
+            
+            if (!port) {
+                showAlert('Please select a serial port');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({port, format})
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to start logging');
+                }
+                
+                showAlert('Logging started successfully', 'success');
+                updateUIState(true);
+            } catch (error) {
+                showAlert('Failed to start logging: ' + error.message);
+            }
+        }
+        
+        async function stopLogging() {
+            try {
+                const response = await fetch('/api/stop', {method: 'POST'});
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to stop logging');
+                }
+                
+                showAlert('Logging stopped successfully', 'success');
+                updateUIState(false);
+                refreshLogs();
+            } catch (error) {
+                showAlert('Failed to stop logging: ' + error.message);
+            }
+        }
+        
+        function updateUIState(active) {
+            document.getElementById('start-btn').disabled = active;
+            document.getElementById('stop-btn').disabled = !active;
+            document.getElementById('port').disabled = active;
+            document.getElementById('format').disabled = active;
+        }
+        
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusDiv = document.getElementById('status');
+                const statusText = document.getElementById('status-text');
+                const statusDetails = document.getElementById('status-details');
+                
+                if (data.active) {
+                    statusDiv.className = 'status active';
+                    statusText.textContent = 'Active - Logging';
+                    statusDetails.innerHTML = `<strong>Port:</strong> ${data.port} | <strong>Format:</strong> ${data.format}`;
+                    
+                    // Update live data
+                    updateLiveData(data.buffer);
+                } else {
+                    statusDiv.className = 'status inactive';
+                    statusText.textContent = 'Idle';
+                    statusDetails.innerHTML = '';
+                }
+                
+                updateUIState(data.active);
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        }
+        
+        function updateLiveData(packets) {
+            const liveDataDiv = document.getElementById('live-data');
+            
+            if (!packets || packets.length === 0) {
+                liveDataDiv.innerHTML = '<div class="empty-state">No data yet. Start logging to see live packets.</div>';
+                return;
+            }
+            
+            liveDataDiv.innerHTML = packets.map(packet => `
+                <div class="packet">
+                    <strong>Packet #${packet.packet_num}</strong> | 
+                    ${new Date(packet.timestamp).toLocaleTimeString()} | 
+                    RSSI: ${packet.rssi} | 
+                    Channel: ${packet.channel} |
+                    Amplitude: ${packet.amplitude_mean}
+                </div>
+            `).join('');
+        }
+        
+        async function refreshLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                const data = await response.json();
+                
+                const fileList = document.getElementById('file-list');
+                
+                if (!data.files || data.files.length === 0) {
+                    fileList.innerHTML = '<li class="empty-state">No log files yet</li>';
+                    return;
+                }
+                
+                fileList.innerHTML = data.files.map(file => `
+                    <li class="file-item">
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-meta">
+                                ${formatFileSize(file.size)} | 
+                                ${new Date(file.modified).toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-secondary btn-small" onclick="downloadFile('${file.name}')">
+                                Download
+                            </button>
+                            <button class="btn-danger btn-small" onclick="deleteFile('${file.name}')">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (error) {
+                showAlert('Failed to fetch logs: ' + error.message);
+            }
+        }
+        
+        function downloadFile(filename) {
+            window.location.href = `/api/download/${filename}`;
+        }
+        
+        async function deleteFile(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/delete/${filename}`, {method: 'DELETE'});
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to delete file');
+                }
+                
+                showAlert('File deleted successfully', 'success');
+                refreshLogs();
+            } catch (error) {
+                showAlert('Failed to delete file: ' + error.message);
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        function startStatusPolling() {
+            updateStatus();
+            statusInterval = setInterval(updateStatus, 1000);
+        }
+    </script>
+</body>
+</html>

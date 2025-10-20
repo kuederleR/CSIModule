@@ -320,9 +320,3 @@ To add new features:
 ## License
 
 This project is licensed under the terms specified in the LICENSE file.
-
-## Acknowledgments
-
-- Espressif Systems for ESP-IDF framework
-- ESP32 CSI community for research and development
-- Docker community for containerization tools

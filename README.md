@@ -4,12 +4,12 @@ A streamlined Docker-based solution for configuring and flashing ESP32 modules a
 
 ## Features
 
-- 🐳 **Docker-based**: Completely containerized with ESP-IDF toolchain
-- 🚀 **Simple CLI**: Single command to configure and flash ESP32 modules
-- ⚙️ **Flexible Configuration**: Command-line options or YAML configuration files
-- 🔌 **Auto-detection**: Automatic serial port detection
-- 📊 **Rich Output**: Beautiful terminal output with progress indicators
-- 🎯 **Pre-configured**: Ready-to-use templates for common use cases
+- :whale: **Docker-based**: Completely containerized with ESP-IDF toolchain
+- :rocket: **Simple CLI**: Single command to configure and flash ESP32 modules
+- :gear: **Flexible Configuration**: Command-line options or YAML configuration files
+- :electric_plug: **Auto-detection**: Automatic serial port detection
+- :bar_chart: **Rich Output**: Terminal output with progress indicators
+- :heavy_check_mark: **Pre-configured**: Ready-to-use templates for common use cases
 
 ## Quick Start
 
@@ -301,6 +301,9 @@ CSIModule/
 ├── flash_csi_docker.sh         # Main helper script
 └── README.md                   # This file
 ```
+
+### Web Interface
+For simple anaslysis, a web interface is provided. See the `webui` subfolder for details. 
 
 ### Extending the Tool
 

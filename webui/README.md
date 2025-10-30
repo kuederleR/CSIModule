@@ -47,22 +47,16 @@ ESP32 → Serial Port → CSI Reader Manager
 cd CSIModule/webui
 ```
 
-2. **(Optional) Install ROS2 message types**:
-If you want ROS2 publishing support:
+2. **Start the service**:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kuederleR/ros2-csi-msgs/refs/heads/main/install.sh | bash
+docker compose up -d
 ```
 
-3. **Start the service**:
-```bash
-docker-compose up -d
-```
+3. **Open browser**: http://localhost:5000
 
-4. **Open browser**: http://localhost:5000
-
-5. **Stop the service**:
+4. **Stop the service**:
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ## Usage
@@ -300,6 +294,12 @@ python app.py
 **Container can't access devices?**
 - Run with `--privileged` flag or add specific device access
 - Check host USB permissions: `ls -l /dev/ttyUSB*`
+
+**Blank page at localhost:5000?**
+This may be an issue with how MacOS or Windows handles 'host' docker networking. For these operating systems, it is recommended to use a different profile when running the container: 
+```bash 
+docker compose --profile non-linux up
+```
 
 ## License
 

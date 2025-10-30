@@ -1,17 +1,30 @@
+# Base service configuration
+x-common-config: &common-config
+  build: .
+  container_name: csi-logger
+  privileged: true
+  volumes:
+    - ./logs:/app/logs
+    # - /opt/ros2-csi-msgs:/opt/ros2-csi-msgs:ro
+  restart: unless-stopped
+  environment:
+    - PYTHONUNBUFFERED=1
+    # - ROS_DOMAIN_ID=0
+    # - ROS_LOCALHOST_ONLY=0
+  ipc: host
+
 services:
+  # Linux configuration - uses host networking and device access (default)
   csi-logger:
-    build: .
-    container_name: csi-logger
+    <<: *common-config
     devices:
       - /dev:/dev
-    privileged: true
-    volumes:
-      - ./logs:/app/logs
-      - /opt/ros2-csi-msgs:/opt/ros2-csi-msgs:ro
-    restart: unless-stopped
-    environment:
-      - PYTHONUNBUFFERED=1
-      # - ROS_DOMAIN_ID=0
-      # - ROS_LOCALHOST_ONLY=0
     network_mode: "host"
-    ipc: host
+
+  # Non-Linux configuration (macOS/Windows) - uses port forwarding
+  csi-logger-port:
+    <<: *common-config
+    container_name: csi-logger-port
+    profiles: ["non-linux"]
+    ports:
+      - "5600:5000"

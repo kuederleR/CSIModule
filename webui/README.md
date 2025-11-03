@@ -301,6 +301,8 @@ This may be an issue with how MacOS or Windows handles 'host' docker networking.
 docker compose --profile non-linux up
 ```
 
+Because MacOS sometimes uses port 5000 for the AirPlay Receiver, with the non-linux profile, you can access the page at [localhost:5600](http://localhost:5600)
+
 ## License
 
 Same as parent project (CSIModule)
